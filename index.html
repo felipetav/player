@@ -1063,20 +1063,31 @@
                 
                 // Set highlights
                 highlights = meta.highlights || [];
-                updateHighlightsUI();
+                console.log('Loaded highlights:', highlights.length);
 
-                // B. GET AUDIO STREAM FROM DRIVE
+                // B. DOWNLOAD AUDIO AS BLOB (required for seeking to work!)
+                showToast('Downloading audio...');
                 const audioUrl = `${BACKEND_URL}/api/audio/${data.audioId}`;
+                const audioRes = await fetch(audioUrl);
+                if (!audioRes.ok) throw new Error('Failed to fetch audio');
+                const audioBlob = await audioRes.blob();
+                const audioBlobUrl = URL.createObjectURL(audioBlob);
+                
                 if (currentAudio) currentAudio.pause();
-                currentAudio = new Audio(audioUrl);
+                currentAudio = new Audio(audioBlobUrl);
                 currentAudio.preload = 'auto';
                 audioReady = false;
                 
                 currentAudio.addEventListener('loadedmetadata', () => {
                     audioReady = true;
+                    console.log('Audio ready. Duration:', currentAudio.duration);
                 });
                 
+                // Force load
+                currentAudio.load();
+                
                 document.getElementById('file-name').textContent = data.label;
+                document.getElementById('file-info').textContent = "Audio downloaded ✓";
                 document.getElementById('file-display').classList.add('has-file');
 
                 // Auto-Start if text exists
@@ -1088,7 +1099,8 @@
                     progressBar.style.display = 'block';
                     renderList();
                     updateProgress();
-                    showToast('Ready! Tap to play.');
+                    updateHighlightsUI(); // Show highlights sidebar!
+                    showToast('Ready! Tap a card to play.');
                 }
 
             } catch (err) {
