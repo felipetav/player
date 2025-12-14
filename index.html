@@ -1363,39 +1363,54 @@
         // BACKEND API INTEGRATION
         // ============================================
         
-        // CONFIGURATION - Replace with your Render URL
-        // IMPORTANT: No trailing slash
+        // REPLACE THIS LINE WITH YOUR REAL URL:
         const BACKEND_URL = 'https://dialogue-backend.onrender.com';
 
         // 1. Load the list of dialogues when page opens
         async function loadDialogueList() {
             const select = document.getElementById('dialogue-select');
-            select.innerHTML = '<option>Loading...</option>';
+            const btn = document.getElementById('drive-connect-btn');
+            
+            // Show loading state
+            if(btn) {
+                btn.innerHTML = '<span>⏳</span> Waking up server...';
+                btn.disabled = true;
+            }
+            
+            select.innerHTML = '<option>Connecting...</option>';
 
             try {
+                console.log('Fetching from:', `${BACKEND_URL}/api/dialogues`); // Debug log
                 const res = await fetch(`${BACKEND_URL}/api/dialogues`);
-                if (!res.ok) throw new Error('Backend error');
+                
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
                 
                 const dialogues = await res.json();
                 
+                // Success! Populate dropdown
                 select.innerHTML = '<option value="">Select dialogue...</option>';
                 dialogues.forEach(d => {
                     const option = document.createElement('option');
-                    option.value = JSON.stringify(d); // Store IDs in value
+                    option.value = JSON.stringify(d); 
                     option.textContent = d.label;
                     select.appendChild(option);
                 });
 
-                // Show the dropdown area (hide the connect button since we don't need it)
+                // Hide the button, show the dropdown
                 document.getElementById('drive-status').style.display = 'none';
                 document.getElementById('drive-files').style.display = 'block';
+                showToast('Connected to Server!');
 
             } catch (err) {
                 console.error(err);
-                showToast('Error connecting to server. Is it waking up?');
-                select.innerHTML = '<option>Connection Failed - Retry</option>';
-                // Allow retry on click
-                select.onclick = () => loadDialogueList();
+                // If it fails, let the user try again
+                if(btn) {
+                    btn.innerHTML = '<span>↻</span> Server Sleeping - Tap to Retry';
+                    btn.onclick = loadDialogueList;
+                    btn.disabled = false;
+                }
+                select.innerHTML = '<option>Connection Failed</option>';
+                showToast('Server is sleeping (Free Plan). Click Retry in 30s.');
             }
         }
 
