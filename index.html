@@ -1435,12 +1435,17 @@
                 const text = await textRes.text();
                 document.getElementById('dialogueText').value = text;
 
-                // B. Set Audio Source directly to stream URL
+                // B. Download audio as blob (required for seeking to work)
+                showToast('Downloading audio...');
                 const audioUrl = `${BACKEND_URL}/api/file/${data.audioId}`;
+                const audioRes = await fetch(audioUrl);
+                if (!audioRes.ok) throw new Error('Failed to fetch audio');
+                const audioBlob = await audioRes.blob();
+                const audioBlobUrl = URL.createObjectURL(audioBlob);
                 
-                // Set up the player
+                // Set up the player with blob URL (allows seeking)
                 if (currentAudio) currentAudio.pause();
-                currentAudio = new Audio(audioUrl);
+                currentAudio = new Audio(audioBlobUrl);
                 currentAudio.preload = 'auto';
                 audioReady = false;
                 
@@ -1449,9 +1454,12 @@
                     debugLog('Audio ready. Duration:', currentAudio.duration);
                 });
                 
+                // Force load
+                currentAudio.load();
+                
                 // UI Updates
                 document.getElementById('file-name').textContent = data.label;
-                document.getElementById('file-info').textContent = "Streaming from server";
+                document.getElementById('file-info').textContent = "Audio downloaded ✓";
                 document.getElementById('file-display').classList.add('has-file');
 
                 showToast('Loaded! Press Start.');
